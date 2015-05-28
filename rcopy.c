@@ -16,13 +16,17 @@
 #include "cpe464.h"
 #include "rcopy.h"
 
+Connection server;
+
 int main(int argc, char *argv[])
 {
     int32_t output_file = 0;
     int32_t select_count = 0;
+    int32_t buf_size = 0;
+    int32_t window_size = 0;
     STATE state = FILENAME;
 
-    check_args(argc, argv);
+    check_args(argc, argv, &buf_size, &window_size);
 
     sendtoErr_init(atof(argv[4]), DROP_ON, FLIP_ON, DEBUG_ON, RSEED_ON);
 
@@ -143,15 +147,15 @@ STATE recv_data(int32_t output_file)
     return RECV_DATA;
 }
 
-void check_args(int argc, char **argv)
+void check_args(int argc, char **argv, int32_t *buf_size, int32_t *window_size)
 {
     /* note this is only a rudimentary arg check and probably has many security
        problems that Dr. Nico would point out and then take points off...
        someday I'll beef it up. */
 
-    if (argc != 7)
+    if (argc != 8)
     {
-        printf("Usage %s fromFile toFile buffer_size error_rate hostname port\n", argv[0]);
+        printf("Usage %s fromFile toFile buffer_size error_rate window_size hostname port\n", argv[0]);
         exit(-1);
     }
     if (strlen(argv[1]) > 1000)
@@ -174,4 +178,6 @@ void check_args(int argc, char **argv)
         printf("Error rate needs to be between 0 and less than 1 and is: %d\n", atoi(argv[4]));
         exit(-1);
     }
+    *buf_size = atoi(argv[3]);
+    *window_size = atoi(argv[5]);
 }

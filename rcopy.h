@@ -7,6 +7,4 @@ enum State
 
 STATE filename(char *fname, int32_t buf_size);
 STATE recv_data(int32_t output_file);
-void check_args(int argc, char **argv);
-
-Connection server;
+void check_args(int argc, char **argv, int32_t *buf_size, int32_t *window_size);
