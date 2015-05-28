@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
         {
             printf("processed wait\n");
         }
-        printf("after process wait... back to select\n");
+        //printf("after process wait... back to select\n");
     }
 
     return 0;

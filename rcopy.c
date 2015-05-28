@@ -36,10 +36,10 @@ int main(int argc, char *argv[])
         switch (state) {
             case FILENAME:
                 /* Everytime we try to start/restart a connection get a new socket */
-                if (udp_client_setup(argv[5], atoi(argv[6]), &server) < 0)
+                if (udp_client_setup(argv[6], atoi(argv[7]), &server) < 0)
                     exit(-1);
 
-                state = filename(argv[1], atoi(argv[3]));
+                state = filename(argv[1], buf_size);
 
                 /*if no response from server then repeat sending filename (close socket) so you can open another */
                 if (state == FILENAME)
