@@ -74,9 +74,6 @@ int main (int argc, char *argv[])
                 else
                     state = RECV_DATA;
 */
-                printf("ready to send data\n");
-                state = SEND_DATA;
-                break;
             case SEND_DATA:
                 state = send_data(packet, &packet_len, data_file, buf_size, &seq_num);
                 break;
