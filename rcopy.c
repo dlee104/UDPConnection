@@ -20,7 +20,6 @@ Connection server;
 
 int main (int argc, char *argv[])
 {
-    int32_t output_file = 0;
     int32_t select_count = 0;
     int32_t buf_size = 0;
     int32_t window_size = 0;
@@ -80,9 +79,6 @@ int main (int argc, char *argv[])
                 break;
             case SEND_DATA:
                 state = send_data(packet, &packet_len, data_file, buf_size, &seq_num);
-                break;
-            case RECV_DATA:
-                state = recv_data(output_file);
                 break;
             case DONE:
                 break;
@@ -157,45 +153,6 @@ STATE send_data(uint8_t *packet, int32_t *packet_len, int32_t data_file, int32_t
             return WAIT_ON_ACK;
             break;
     }
-}
-
-STATE recv_data(int32_t output_file)
-{
-    int32_t seq_num = 0;
-    uint8_t flag = 0;
-    int32_t data_len = 0;
-    uint8_t data_buf[MAX_LEN];
-    uint8_t packet[MAX_LEN];
-    static int32_t expected_seq_num = START_SEQ_NUM;
-
-    if (select_call(server.sk_num, 10, 0, NOT_NULL) == 0)
-    {
-        printf("Timeout after 10 seconds, client done.\n");
-        return DONE;
-    }
-
-    data_len = recv_buf(data_buf, 1400, server.sk_num, &server, &flag, &seq_num);
-
-    /* do state RECV_DATA again if there is a crc error (don't send ack, don't write data) */
-    if (data_len == CRC_ERROR)
-        return RECV_DATA;
-
-    /* send ACK */
-    send_buf(packet, 1, &server, ACK, 0, packet);
-
-    if(flag == END_OF_FILE)
-    {
-        printf("File done\n");
-        return DONE;
-    }
-
-    if(seq_num == expected_seq_num)
-    {
-        expected_seq_num++;
-        write(output_file, &data_buf, data_len);
-    }
-
-    return RECV_DATA;
 }
 
 void check_args(int argc, char **argv, int32_t *buf_size, int32_t *window_size)
