@@ -99,7 +99,9 @@ void process_client(int32_t server_sk_num, uint8_t * buf, int32_t recv_len, Conn
                 state = filename(client, buf, recv_len, &data_file, &buf_size);
                 break;
             case SEND_DATA:
-                state = send_data(client, packet, &packet_len, data_file, buf_size, &seq_num);
+                //state = send_data(client, packet, &packet_len, data_file, buf_size, &seq_num);
+                state = DONE; //temporary
+                printf("ready to receive data\n");
                 break;
             case WAIT_ON_ACK:
                 state = wait_on_ack(client);
@@ -133,7 +135,8 @@ STATE filename(Connection * client, uint8_t * buf, int32_t recv_len, int32_t * d
         exit(-1);
     }
 
-    if (((*data_file) = open(fname, O_RDONLY)) < 0)
+    if (((*data_file) = open(fname, O_WRONLY | O_CREAT | O_TRUNC |
+        O_EXCL)) < 0)
     {
         send_buf(response, 0, client, FNAME_BAD, 0, buf);
         return DONE;

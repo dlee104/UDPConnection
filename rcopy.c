@@ -24,22 +24,30 @@ int main(int argc, char *argv[])
     int32_t select_count = 0;
     int32_t buf_size = 0;
     int32_t window_size = 0;
+    int32_t data_file = 0;
     STATE state = FILENAME;
 
     check_args(argc, argv, &buf_size, &window_size);
 
     sendtoErr_init(atof(argv[4]), DROP_ON, FLIP_ON, DEBUG_ON, RSEED_ON);
 
-    state = FILENAME;
+    //check if local file exists
+    if ((data_file = open(argv[1], O_RDONLY)) < 0)
+    {
+        printf("File %s does not exist\n", argv[1]);
+        state = DONE;
+    }
 
-    while (state != DONE) {
-        switch (state) {
+    while (state != DONE)
+    {
+        switch (state)
+        {
             case FILENAME:
                 /* Everytime we try to start/restart a connection get a new socket */
                 if (udp_client_setup(argv[6], atoi(argv[7]), &server) < 0)
                     exit(-1);
 
-                state = filename(argv[1], buf_size);
+                state = filename(argv[2], buf_size);
 
                 /*if no response from server then repeat sending filename (close socket) so you can open another */
                 if (state == FILENAME)
@@ -54,7 +62,7 @@ int main(int argc, char *argv[])
                 break;
             case FILE_OK:
                 select_count = 0;
-
+/*
                 if ((output_file = open(argv[2], O_CREAT | O_TRUNC | O_WRONLY, 0600)) < 0)
                 {
                     perror("File open");
@@ -62,6 +70,9 @@ int main(int argc, char *argv[])
                 }
                 else
                     state = RECV_DATA;
+*/
+                printf("ready to send data\n");
+                state = DONE;
                 break;
             case RECV_DATA:
                 state = recv_data(output_file);
@@ -99,7 +110,7 @@ STATE filename(char *fname, int32_t buf_size)
 
         if (flag == FNAME_BAD)
         {
-            printf("File %s not found\n", fname);
+            printf("File %s already exists and is write-protected\n", fname);
             return DONE;
         }
 
