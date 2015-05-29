@@ -127,8 +127,7 @@ STATE filename(Connection * client, uint8_t * buf, int32_t recv_len, int32_t * d
         exit(-1);
     }
 
-    if (((*data_file) = open(fname, O_WRONLY | O_CREAT | O_TRUNC |
-        O_EXCL)) < 0)
+    if (((*data_file) = open(fname, O_WRONLY | O_CREAT | O_TRUNC, 0600)) < 0)
     {
         send_buf(response, 0, client, FNAME_BAD, 0, buf);
         return DONE;
