@@ -18,13 +18,17 @@
 
 Connection server;
 
-int main(int argc, char *argv[])
+int main (int argc, char *argv[])
 {
     int32_t output_file = 0;
     int32_t select_count = 0;
     int32_t buf_size = 0;
     int32_t window_size = 0;
     int32_t data_file = 0;
+    int32_t packet_len = 0;
+    int32_t seq_num = START_SEQ_NUM;
+    uint8_t packet[MAX_LEN];
+    
     STATE state = FILENAME;
 
     check_args(argc, argv, &buf_size, &window_size);
@@ -72,15 +76,25 @@ int main(int argc, char *argv[])
                     state = RECV_DATA;
 */
                 printf("ready to send data\n");
-                state = DONE;
+                state = SEND_DATA;
+                break;
+            case SEND_DATA:
+                state = send_data(packet, &packet_len, data_file, buf_size, &seq_num);
                 break;
             case RECV_DATA:
                 state = recv_data(output_file);
                 break;
             case DONE:
                 break;
+            case WAIT_ON_ACK:
+                state = wait_on_ack();
+                break;
+            case TIMEOUT_ON_ACK:
+                state = timeout_on_ack(packet, packet_len);
+                break;
             default:
                 printf("ERROR - in default state\n");
+                state = DONE;
                 break;
         }
     }
@@ -117,6 +131,32 @@ STATE filename(char *fname, int32_t buf_size)
         return FILE_OK;
     }
     return FILENAME;
+}
+
+STATE send_data(uint8_t *packet, int32_t *packet_len, int32_t data_file, int32_t buf_size, int32_t *seq_num)
+{
+    uint8_t buf[MAX_LEN];
+    int32_t len_read = 0;
+
+    len_read = read(data_file, buf, buf_size);
+    
+    switch(len_read)
+    {
+        case -1:
+            perror("send_data, read error");
+            return DONE;
+            break;
+        case 0:
+            (*packet_len) = send_buf(buf, 1, &server, END_OF_FILE, *seq_num, packet);
+            printf("File Transfer Complete\n");
+            return DONE;
+            break;
+        default:
+            (*packet_len) = send_buf(buf, len_read, &server, DATA, *seq_num, packet);
+            (*seq_num)++;
+            return WAIT_ON_ACK;
+            break;
+    }
 }
 
 STATE recv_data(int32_t output_file)
@@ -191,4 +231,50 @@ void check_args(int argc, char **argv, int32_t *buf_size, int32_t *window_size)
     }
     *buf_size = atoi(argv[3]);
     *window_size = atoi(argv[5]);
+}
+
+STATE wait_on_ack()
+{
+    static int32_t send_count = 0;
+    uint32_t crc_check = 0;
+    uint8_t buf[MAX_LEN];
+    int32_t len = 1000;
+    uint8_t flag = 0;
+    int32_t seq_num = 0;
+
+    send_count++;
+    if (send_count > 5)
+    {
+        printf("Sent data 5 times, no ACK, client session terminated\n");
+        return(DONE);
+    }
+
+    if (select_call(server.sk_num, 1, 0, NOT_NULL) != 1)
+    {
+        return (TIMEOUT_ON_ACK);
+    }
+
+    crc_check = recv_buf(buf, len, server.sk_num, &server, &flag, &seq_num);
+
+    if (crc_check == CRC_ERROR)
+        return WAIT_ON_ACK;
+
+    if (flag != ACK)
+    {
+        printf("In wait_on_ack but its not an ACK flag (this should never happen) is: %d\n", flag);
+        exit(-1);
+    }
+    /* ack is good so reset count and then go send some more data */
+    send_count = 0;
+    return SEND_DATA;
+}
+
+STATE timeout_on_ack(uint8_t * packet, int32_t packet_len)
+{
+    if(sendtoErr(server.sk_num, packet, packet_len, 0, (struct sockaddr *) &(server.remote), server.len) < 0)
+    {
+        perror("timeout_on_ack sendto");
+        exit(-1);
+    }
+    return WAIT_ON_ACK;
 }
